@@ -6,7 +6,6 @@ import { formatEther, parseEther } from "viem";
 import { useAccount, useReadContract, useWriteContract } from "wagmi";
 import { useScaffoldReadContract, useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
 
-// Minimal ABI so TypeScript stops complaining about the two MockERC20s
 const erc20Abi = [
   {
     type: "function",
@@ -32,15 +31,12 @@ const Home: NextPage = () => {
   const [stakeAmt, setStakeAmt] = useState("");
   const [withdrawAmt, setWithdrawAmt] = useState("");
 
-  // Safe fallback address to prevent TS errors
   const userAddr = address || "0x0000000000000000000000000000000000000000";
 
-  // Pool stats
   const { data: totalSupply } = useScaffoldReadContract({ contractName: "StakingPool", functionName: "totalSupply" });
   const { data: rewardRate } = useScaffoldReadContract({ contractName: "StakingPool", functionName: "rewardRate" });
   const { data: periodFinish } = useScaffoldReadContract({ contractName: "StakingPool", functionName: "periodFinish" });
 
-  // User stats
   const { data: staked } = useScaffoldReadContract({
     contractName: "StakingPool",
     functionName: "balanceOf",
@@ -50,14 +46,12 @@ const Home: NextPage = () => {
     contractName: "StakingPool",
     functionName: "earned",
     args: [userAddr],
-    query: { refetchInterval: 4000 }, // Automatically refresh every 4 seconds!
+    query: { refetchInterval: 4000 },
   });
 
-  // Get token contract addresses from the pool
   const { data: stakingToken } = useScaffoldReadContract({ contractName: "StakingPool", functionName: "stakingToken" });
   const { data: rewardToken } = useScaffoldReadContract({ contractName: "StakingPool", functionName: "rewardToken" });
 
-  // Read wallet balances using standard Wagmi
   const { data: stakeBal } = useReadContract({
     address: stakingToken,
     abi: erc20Abi,
@@ -119,119 +113,138 @@ const Home: NextPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-base-200 py-10 px-4">
-      <div className="max-w-4xl mx-auto">
+    <div className="min-h-screen bg-slate-50 py-8 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-3xl mx-auto">
+        {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-5xl font-bold">⚡ Staking Pool</h1>
-          <p className="text-lg text-base-content/70 mt-2">Stake STK · Earn RWD every second</p>
+          <h1 className="text-4xl md:text-5xl font-extrabold text-red-600 tracking-tight">⚡ Staking Pool</h1>
+          <p className="mt-3 text-lg text-slate-600 font-medium">Stake STK · Earn RWD every second</p>
         </div>
 
-        <div className="card bg-base-100 shadow-xl mb-6">
-          <div className="card-body">
-            <h2 className="card-title text-2xl mb-2">Pool Stats</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="stat bg-base-200 rounded-box">
-                <div className="stat-title">Total Staked</div>
-                <div className="stat-value text-2xl">{fmt(totalSupply)}</div>
-                <div className="stat-desc">STK</div>
-              </div>
-              <div className="stat bg-base-200 rounded-box">
-                <div className="stat-title">Reward Rate</div>
-                <div className="stat-value text-2xl">{fmt(rewardRate)}</div>
-                <div className="stat-desc">RWD / second</div>
-              </div>
-              <div className="stat bg-base-200 rounded-box">
-                <div className="stat-title">Period Ends</div>
-                <div className="stat-value text-2xl">
-                  {periodFinish ? new Date(Number(periodFinish) * 1000).toLocaleDateString() : "—"}
-                </div>
-                <div className="stat-desc">
-                  {periodFinish ? new Date(Number(periodFinish) * 1000).toLocaleTimeString() : ""}
-                </div>
-              </div>
+        {/* Pool Stats */}
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-6">
+          <h2 className="text-lg font-bold text-slate-800 mb-4">Pool Stats</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
+              <p className="text-sm font-medium text-slate-500">Total Staked</p>
+              <p className="text-2xl font-bold text-slate-900 mt-1">
+                {fmt(totalSupply)} <span className="text-sm font-normal text-slate-500">STK</span>
+              </p>
+            </div>
+            <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
+              <p className="text-sm font-medium text-slate-500">Reward Rate</p>
+              <p className="text-2xl font-bold text-slate-900 mt-1">
+                {fmt(rewardRate)} <span className="text-sm font-normal text-slate-500">RWD/s</span>
+              </p>
+            </div>
+            <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
+              <p className="text-sm font-medium text-slate-500">Period Ends</p>
+              <p className="text-lg font-bold text-slate-900 mt-1">
+                {periodFinish ? new Date(Number(periodFinish) * 1000).toLocaleDateString() : "—"}
+              </p>
             </div>
           </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="card bg-base-100 shadow-xl">
-            <div className="card-body">
-              <h2 className="card-title">Your Position</h2>
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-base-content/70">Staked</span>
-                  <span className="font-mono font-bold">{fmt(staked)} STK</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-base-content/70">Earned</span>
-                  <span className="font-mono font-bold text-success">{fmt(earned)} RWD</span>
-                </div>
-                <div className="divider my-2" />
-                <div className="flex justify-between text-sm">
-                  <span className="text-base-content/50">Wallet STK</span>
-                  <span className="font-mono">{fmt(stakeBal)}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-base-content/50">Wallet RWD</span>
-                  <span className="font-mono">{fmt(rewardBal)}</span>
-                </div>
+          {/* Your Position */}
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+            <h2 className="text-lg font-bold text-slate-800 mb-4">Your Position</h2>
+            <div className="space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="text-slate-600 font-medium">Staked</span>
+                <span className="font-mono font-bold text-lg text-slate-900">{fmt(staked)} STK</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-red-600 font-bold">Earned</span>
+                <span className="font-mono font-bold text-xl text-red-600">{fmt(earned)} RWD</span>
+              </div>
+              <div className="border-t border-slate-100 my-3"></div>
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-slate-400">Wallet STK</span>
+                <span className="font-mono text-slate-700">{fmt(stakeBal)}</span>
+              </div>
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-slate-400">Wallet RWD</span>
+                <span className="font-mono text-slate-700">{fmt(rewardBal)}</span>
               </div>
             </div>
           </div>
 
-          <div className="card bg-base-100 shadow-xl">
-            <div className="card-body">
-              <h2 className="card-title">Actions</h2>
-              <div className="form-control">
-                <label className="label">
-                  <span className="label-text">Stake STK</span>
-                </label>
-                <div className="join w-full">
+          {/* Actions */}
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+            <h2 className="text-lg font-bold text-slate-800 mb-4">Actions</h2>
+
+            <div className="space-y-4">
+              {/* Stake */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Stake STK</label>
+                <div className="flex gap-2">
                   <input
                     type="number"
                     placeholder="0.0"
-                    className="input input-bordered join-item w-full"
+                    className="flex-1 w-full rounded-lg border border-slate-300 px-4 py-2.5 focus:border-red-500 focus:ring-2 focus:ring-red-200 outline-none transition"
                     value={stakeAmt}
                     onChange={e => setStakeAmt(e.target.value)}
                   />
-                  <button className="btn btn-primary join-item" onClick={stake} disabled={!stakeAmt}>
+                  <button
+                    className="bg-red-600 hover:bg-red-700 text-white font-medium px-6 py-2.5 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                    onClick={stake}
+                    disabled={!stakeAmt}
+                  >
                     Stake
                   </button>
                 </div>
               </div>
-              <div className="form-control mt-2">
-                <label className="label">
-                  <span className="label-text">Withdraw STK</span>
-                </label>
-                <div className="join w-full">
+
+              {/* Withdraw */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Withdraw STK</label>
+                <div className="flex gap-2">
                   <input
                     type="number"
                     placeholder="0.0"
-                    className="input input-bordered join-item w-full"
+                    className="flex-1 w-full rounded-lg border border-slate-300 px-4 py-2.5 focus:border-red-500 focus:ring-2 focus:ring-red-200 outline-none transition"
                     value={withdrawAmt}
                     onChange={e => setWithdrawAmt(e.target.value)}
                   />
-                  <button className="btn btn-secondary join-item" onClick={withdraw} disabled={!withdrawAmt}>
+                  <button
+                    className="bg-slate-800 hover:bg-slate-900 text-white font-medium px-6 py-2.5 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                    onClick={withdraw}
+                    disabled={!withdrawAmt}
+                  >
                     Withdraw
                   </button>
                 </div>
               </div>
-              <div className="divider">or</div>
-              <button className="btn btn-success w-full" onClick={claim}>
-                🎁 Claim {fmt(earned)} RWD
-              </button>
             </div>
+
+            <div className="relative flex py-5 items-center">
+              <div className="flex-grow border-t border-slate-200"></div>
+              <span className="flex-shrink-0 mx-4 text-slate-400 text-sm">or</span>
+              <div className="flex-grow border-t border-slate-200"></div>
+            </div>
+
+            {/* Claim */}
+            <button
+              className="w-full bg-white border-2 border-red-600 text-red-600 hover:bg-red-50 font-bold py-3 rounded-lg transition"
+              onClick={claim}
+            >
+              🎁 Claim {fmt(earned)} RWD
+            </button>
           </div>
         </div>
 
-        <div className="card bg-base-100 shadow-xl mt-6">
-          <div className="card-body">
-            <h2 className="card-title text-sm">🔧 Dev Tools</h2>
-            <p className="text-xs text-base-content/60">Mint 1,000 test STK to your wallet.</p>
-            <button className="btn btn-warning btn-sm mt-2" onClick={mintStake}>
-              Mint 1,000 STK
-            </button>
-          </div>
+        {/* Dev Tools */}
+        <div className="mt-8 bg-white rounded-2xl border border-dashed border-slate-300 p-6 text-center">
+          <h2 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-2">🔧 Dev Tools</h2>
+          <p className="text-sm text-slate-500 mb-4">Mint 1,000 test STK to your wallet to try the app.</p>
+          <button
+            className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium px-6 py-2 rounded-lg transition text-sm border border-slate-200"
+            onClick={mintStake}
+          >
+            Mint 1,000 STK
+          </button>
         </div>
       </div>
     </div>
